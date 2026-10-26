@@ -2,13 +2,24 @@
   "entities": {
     "UserProfile": {
       "title": "UserProfile",
-      "description": "User profile, language preference, age for preventive screenings, and senior accessibility settings.",
+      "description": "User profile with email address, login category, contact details, language preference, age for preventive screenings, and senior accessibility settings.",
       "type": "object",
       "properties": {
         "uid": {
           "type": "string",
           "maxLength": 128,
           "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160,
+          "description": "User authenticated email address."
+        },
+        "loginCategory": {
+          "type": "string",
+          "enum": ["user", "doctor", "community_head"],
+          "maxLength": 30
         },
         "displayName": {
           "type": "string",
@@ -40,6 +51,26 @@
           "type": "string",
           "maxLength": 128
         },
+        "doctorSpecialty": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "doctorClinic": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "communityWard": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "communityDesignation": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "format": "date-time"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -49,7 +80,7 @@
           "format": "date-time"
         }
       },
-      "required": ["uid", "displayName", "contactNumber", "age", "bloodGroup", "preferredLanguage", "seniorMode", "encryptionKeySalt", "createdAt", "updatedAt"]
+      "required": ["uid", "email", "loginCategory", "displayName", "contactNumber", "age", "bloodGroup", "preferredLanguage", "seniorMode", "encryptionKeySalt", "lastLoginAt", "createdAt", "updatedAt"]
     },
     "VitalRecord": {
       "title": "VitalRecord",
@@ -336,12 +367,51 @@
         }
       },
       "required": ["userId", "name", "specialty", "relationType", "hospital", "contactPhone", "createdAt"]
+    },
+    "UserLoginRecord": {
+      "title": "UserLoginRecord",
+      "description": "Secure record of an individual login event storing email, category, timestamp, and auth method.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "loginCategory": {
+          "type": "string",
+          "enum": ["user", "doctor", "community_head"],
+          "maxLength": 30
+        },
+        "authMethod": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "loginTime": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "email", "loginCategory", "authMethod", "loginTime", "createdAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Primary user profile document keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/logins/{loginId}": {
+      "schema": { "$ref": "#/entities/UserLoginRecord" },
+      "description": "Subcollection of immutable user login audit history records."
     },
     "/users/{userId}/vitals/{vitalId}": {
       "schema": { "$ref": "#/entities/VitalRecord" },

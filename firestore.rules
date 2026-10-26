@@ -20,7 +20,7 @@ service cloud.firestore {
       return request.auth != null;
     }
     function isVerifiedUser() {
-      return isSignedIn() && request.auth.token.email_verified == true;
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'password');
     }
     function isOwner(userId) {
       return isVerifiedUser() && request.auth.uid == userId;
@@ -31,9 +31,11 @@ service cloud.firestore {
 
     // Blueprint Validation Helpers
     function isValidUserProfile(data, userId) {
-      return data.keys().hasAll(['uid', 'displayName', 'contactNumber', 'age', 'bloodGroup', 'preferredLanguage', 'seniorMode', 'encryptionKeySalt', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['uid', 'displayName', 'contactNumber', 'age', 'bloodGroup', 'preferredLanguage', 'seniorMode', 'encryptionKeySalt', 'createdAt', 'updatedAt'])
+      return data.keys().hasAll(['uid', 'email', 'loginCategory', 'displayName', 'contactNumber', 'age', 'bloodGroup', 'preferredLanguage', 'seniorMode', 'encryptionKeySalt', 'lastLoginAt', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'loginCategory', 'displayName', 'contactNumber', 'age', 'bloodGroup', 'preferredLanguage', 'seniorMode', 'encryptionKeySalt', 'lastLoginAt', 'createdAt', 'updatedAt', 'doctorSpecialty', 'doctorClinic', 'communityWard', 'communityDesignation'])
         && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid == userId && data.uid == request.auth.uid
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160 && (request.auth.token.email == null || data.email == request.auth.token.email)
+        && data.loginCategory is string && data.loginCategory in ['user', 'doctor', 'community_head']
         && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
         && data.contactNumber is string && data.contactNumber.size() >= 10 && data.contactNumber.size() <= 20 && data.contactNumber.matches('^[0-9+\\-\\s]{10,20}$')
         && data.age is number && data.age >= 0 && data.age <= 125
@@ -41,8 +43,24 @@ service cloud.firestore {
         && data.preferredLanguage is string && data.preferredLanguage.size() <= 10 && data.preferredLanguage in ['en', 'hi', 'mr']
         && data.seniorMode is bool
         && data.encryptionKeySalt is string && data.encryptionKeySalt.size() >= 1 && data.encryptionKeySalt.size() <= 128
+        && (!('doctorSpecialty' in data) || (data.doctorSpecialty is string && data.doctorSpecialty.size() <= 100))
+        && (!('doctorClinic' in data) || (data.doctorClinic is string && data.doctorClinic.size() <= 140))
+        && (!('communityWard' in data) || (data.communityWard is string && data.communityWard.size() <= 120))
+        && (!('communityDesignation' in data) || (data.communityDesignation is string && data.communityDesignation.size() <= 120))
+        && data.lastLoginAt is timestamp
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
+    }
+
+    function isValidUserLoginRecord(data, userId) {
+      return data.keys().hasAll(['userId', 'email', 'loginCategory', 'authMethod', 'loginTime', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'email', 'loginCategory', 'authMethod', 'loginTime', 'createdAt'])
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId == userId && data.userId == request.auth.uid
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160 && (request.auth.token.email == null || data.email == request.auth.token.email)
+        && data.loginCategory is string && data.loginCategory in ['user', 'doctor', 'community_head']
+        && data.authMethod is string && data.authMethod.size() >= 1 && data.authMethod.size() <= 40
+        && data.loginTime is string && data.loginTime.size() >= 1 && data.loginTime.size() <= 50
+        && data.createdAt is timestamp;
     }
 
     function isValidVitalRecord(data, userId) {
@@ -143,7 +161,8 @@ service cloud.firestore {
         && isValidId(userId)
         && isValidUserProfile(incoming(), userId)
         && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time;
+        && incoming().updatedAt == request.time
+        && incoming().lastLoginAt == request.time;
       allow update: if isOwner(userId)
         && isValidId(userId)
         && isValidUserProfile(incoming(), userId)
@@ -151,8 +170,25 @@ service cloud.firestore {
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time
         && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'contactNumber', 'age', 'bloodGroup', 'preferredLanguage', 'seniorMode', 'encryptionKeySalt', 'updatedAt'])
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'email', 'displayName', 'contactNumber', 'loginCategory', 'age',
+            'bloodGroup', 'preferredLanguage', 'seniorMode', 'encryptionKeySalt',
+            'doctorSpecialty', 'doctorClinic', 'communityWard', 'communityDesignation',
+            'lastLoginAt', 'updatedAt'
+          ])
         );
+
+      // /users/{userId}/logins/{loginId}
+      match /logins/{loginId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(loginId) && userExists(userId);
+        allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(loginId)
+          && isValidUserLoginRecord(incoming(), userId)
+          && incoming().createdAt == request.time
+          && userExists(userId);
+      }
 
       // /users/{userId}/vitals/{vitalId}
       match /vitals/{vitalId} {

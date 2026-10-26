@@ -1,3 +1,4 @@
+// Source: Google Maps Platform Code Assist
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   APIProvider,
@@ -137,29 +138,79 @@ const PlacesNearbyScanner: React.FC<PlacesScannerProps> = ({
         region: 'IN',
       };
 
-      const { places } = await (placesLib.Place as any).searchNearby(request);
-      const mapped: NearbyFacility[] = (places || [])
-        .filter((p: any) => p.location)
-        .map((p: any) => ({
-          id: p.id || `${Math.random()}`,
-          displayName: p.displayName || 'Medical Facility',
-          formattedAddress: p.formattedAddress || '',
-          location: {
-            lat:
-              typeof p.location?.lat === 'function'
-                ? p.location.lat()
-                : Number(p.location?.lat || center.lat),
-            lng:
-              typeof p.location?.lng === 'function'
-                ? p.location.lng()
-                : Number(p.location?.lng || center.lng),
-          },
-          rating: p.rating ?? undefined,
-          userRatingCount: p.userRatingCount ?? undefined,
-          primaryType: p.primaryType ?? category,
-          nationalPhoneNumber: p.nationalPhoneNumber ?? undefined,
-          googleMapsURI: p.googleMapsURI ?? undefined,
-        }));
+      let mapped: NearbyFacility[] = [];
+
+      if (placesLib.Place && typeof (placesLib.Place as any).searchNearby === 'function') {
+        try {
+          const { places } = await (placesLib.Place as any).searchNearby(request);
+          if (places && places.length > 0) {
+            mapped = (places || [])
+              .filter((p: any) => p.location)
+              .map((p: any) => ({
+                id: p.id || `${Math.random()}`,
+                displayName: p.displayName || 'Medical Facility',
+                formattedAddress: p.formattedAddress || '',
+                location: {
+                  lat:
+                    typeof p.location?.lat === 'function'
+                      ? p.location.lat()
+                      : Number(p.location?.lat || center.lat),
+                  lng:
+                    typeof p.location?.lng === 'function'
+                      ? p.location.lng()
+                      : Number(p.location?.lng || center.lng),
+                },
+                rating: p.rating ?? undefined,
+                userRatingCount: p.userRatingCount ?? undefined,
+                primaryType: p.primaryType ?? category,
+                nationalPhoneNumber: p.nationalPhoneNumber ?? undefined,
+                googleMapsURI: p.googleMapsURI ?? undefined,
+              }));
+          }
+        } catch (placeErr) {
+          console.warn('Place.searchNearby failed, attempting PlacesService fallback:', placeErr);
+        }
+      }
+
+      // Seamless fallback to PlacesService
+      if (mapped.length === 0 && map && placesLib.PlacesService) {
+        try {
+          const service = new placesLib.PlacesService(map);
+          const legacyType = category === 'hospital' ? 'hospital' : category === 'pharmacy' ? 'pharmacy' : 'doctor';
+          mapped = await new Promise<NearbyFacility[]>((resolve) => {
+            service.nearbySearch(
+              {
+                location: center,
+                radius: 5000,
+                type: legacyType,
+              },
+              (results: any[] | null, status: any) => {
+                if (status === placesLib.PlacesServiceStatus.OK && results) {
+                  resolve(
+                    results.map((r: any) => ({
+                      id: r.place_id || `${Math.random()}`,
+                      displayName: r.name || 'Medical Facility',
+                      formattedAddress: r.vicinity || '',
+                      location: {
+                        lat: r.geometry?.location?.lat() || center.lat,
+                        lng: r.geometry?.location?.lng() || center.lng,
+                      },
+                      rating: r.rating,
+                      userRatingCount: r.user_ratings_total,
+                      primaryType: category,
+                      googleMapsURI: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name || '')}&query_place_id=${r.place_id || ''}`,
+                    }))
+                  );
+                } else {
+                  resolve([]);
+                }
+              }
+            );
+          });
+        } catch (legacyErr) {
+          console.warn('PlacesService search error:', legacyErr);
+        }
+      }
 
       onResults(mapped);
     } catch (err: unknown) {
@@ -191,7 +242,7 @@ export const EmergencyMapSection: React.FC<{
   language: Language;
   seniorMode: boolean;
 }> = ({ language, seniorMode }) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const apiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
   const [center, setCenter] = useState<{ lat: number; lng: number }>({
     lat: 18.5204,
     lng: 73.8567,

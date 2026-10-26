@@ -20,17 +20,21 @@ import {
   Building2,
   Users,
   Award,
+  Mail,
+  KeyRound,
 } from 'lucide-react';
 
 export type LoginCategory = 'user' | 'doctor' | 'community_head';
 
 export interface PatientLoginPayload {
   loginCategory: LoginCategory;
+  email: string;
+  password?: string;
   displayName: string;
   contactNumber: string;
   age: number;
   bloodGroup: string;
-  authMethod: 'direct' | 'google';
+  authMethod: 'password' | 'google' | 'direct';
   // Doctor-specific optional metadata
   doctorSpecialty?: string;
   doctorClinic?: string;
@@ -45,6 +49,7 @@ interface LoginOnboardingPageProps {
   seniorMode: boolean;
   onToggleSeniorMode: () => void;
   initialCategory?: LoginCategory;
+  initialEmail?: string;
   initialName?: string;
   initialContact?: string;
   initialAge?: number;
@@ -63,6 +68,7 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
   seniorMode,
   onToggleSeniorMode,
   initialCategory = 'user',
+  initialEmail = '',
   initialName = '',
   initialContact = '',
   initialAge = 64,
@@ -73,6 +79,9 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
   onCompleteLogin,
 }) => {
   const [loginCategory, setLoginCategory] = useState<LoginCategory>(initialCategory);
+  const [email, setEmail] = useState<string>(initialEmail);
+  const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [displayName, setDisplayName] = useState(initialName);
   const [countryCode, setCountryCode] = useState('+91');
   const [rawPhone, setRawPhone] = useState(
@@ -122,21 +131,20 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           badge: 'Category 1 · Citizen & Patient Health Portal',
           title: 'User / Patient Login Board',
           subtitle:
-            'Enter your name and mobile number to track daily BP/Sugar, check symptoms, consult your doctor, and access age-wise diet & yoga.',
+            'Enter your verified email, password, and mobile number to track daily BP/Sugar, check symptoms, consult your doctor, and access age-wise care.',
           nameLabel: 'Patient / User Full Name *',
           namePlaceholder: 'e.g., Ramesh Kulkarni',
           contactLabel: 'User Contact Number (Mobile / WhatsApp / SOS) *',
           contactHelper:
             'Used for doctor call identification, medication alerts & emergency SOS.',
-          primaryBtn: 'Login as User & Open Health Dashboard',
-          sampleBtn: 'Fill Sample User',
+          primaryBtn: 'Login / Register as User & Open Dashboard',
         },
         doctor: {
           tabLabel: 'Doctor',
           badge: 'Category 2 · Medical Practitioner & Telemedicine Console',
           title: 'Doctor Login Board',
           subtitle:
-            'Login with your registered doctor contact number to receive live patient voice/video calls, review vitals, reply to consultations, and manage appointments.',
+            'Login with your doctor email and registered number to receive live patient calls, review vitals, reply to consultations, and manage appointments.',
           nameLabel: 'Doctor Full Name *',
           namePlaceholder: 'e.g., Dr. Vivek Patil, MBBS, MD',
           contactLabel: 'Doctor Contact / Telemedicine Receiver Number *',
@@ -146,8 +154,7 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           specialtyPlaceholder: 'e.g., Family Physician, Cardiologist, Diabetologist',
           clinicLabel: 'Clinic / Hospital Name & Location *',
           clinicPlaceholder: 'e.g., Patil Clinic, Kothrud, Pune',
-          primaryBtn: 'Login as Doctor & Open Consultation Console',
-          sampleBtn: 'Fill Sample Doctor',
+          primaryBtn: 'Login / Register as Doctor & Open Console',
         },
         community_head: {
           tabLabel: 'Community Project Head',
@@ -164,16 +171,28 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           wardPlaceholder: 'e.g., Ward 12 — Kothrud Health Zone, Pune',
           designationLabel: 'Role / Organization / Health Mission *',
           designationPlaceholder: 'e.g., Community Project Head · Preventive Health Mission',
-          primaryBtn: 'Login as Project Head & Open Command Center',
-          sampleBtn: 'Fill Sample Project Head',
+          primaryBtn: 'Login / Register as Project Head & Open Hub',
         },
       },
+      emailLabel: 'Email ID (Permanent User ID & Database Security) *',
+      emailPlaceholder: 'e.g. name@example.com',
+      emailHelper: 'Every login and health update is securely stored in our Firestore database tied to your email ID.',
+      passwordLabel: 'Password *',
+      passwordPlaceholder: 'Enter account password (min 6 characters)',
+      showPassword: 'Show',
+      hidePassword: 'Hide',
+      dbSecurityBadge: 'Firestore DB & Email ID Secured',
+      dbSecurityDesc: 'Zero-trust Firestore security rules strictly isolate all records to your authenticated Email ID. Every login event is logged to your database history.',
       contactPlaceholder: '10-digit mobile number (e.g. 9876543210)',
       ageLabel: 'Age (Years) *',
       bloodGroupLabel: 'Blood Group',
-      loginGoogleBtn: 'Verify Contact No. & Sign In with Google',
-      submittingText: 'Opening Portal...',
+      primaryEmailBtn: 'Secure Login / Register with Email & Password',
+      loginGoogleBtn: 'Sign In with Google (Verified Email ID)',
+      submittingText: 'Authenticating & Syncing Database...',
       errNameRequired: 'Please enter your full name to continue.',
+      errEmailRequired: 'Please enter your email address.',
+      errEmailInvalid: 'Please enter a valid email address (e.g., user@example.com).',
+      errPasswordShort: 'Password must be at least 6 characters.',
       errPhoneInvalid:
         'Please enter a valid 10-digit mobile contact number (digits only, e.g., 9876543210).',
       aboutHeading: '01. What Is Inside Preventia? Complete 7-Module Health Platform',
@@ -260,21 +279,20 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           badge: 'श्रेणी 1 · नागरिक और रोगी स्वास्थ्य पोर्टल',
           title: 'उपयोगकर्ता / रोगी लॉगिन बोर्ड',
           subtitle:
-            'अपना स्वास्थ्य डैशबोर्ड खोलने के लिए अपना नाम और 10 अंकों का मोबाइल नंबर दर्ज करें।',
+            'दैनिक बीपी/शुगर, AI लक्षण जांच और डॉक्टर परामर्श के लिए अपनी सत्यापित ईमेल आईडी व पासवर्ड से लॉगिन करें।',
           nameLabel: 'उपयोगकर्ता / रोगी का पूरा नाम *',
           namePlaceholder: 'उदा. रमेश कुलकर्णी',
           contactLabel: 'मोबाइल नंबर (Contact No. / WhatsApp) *',
           contactHelper:
             'डॉक्टर कॉल, अपॉइंटमेंट और आपातकालीन SOS सहायता के लिए आवश्यक।',
-          primaryBtn: 'उपयोगकर्ता के रूप में लॉगिन करें',
-          sampleBtn: 'उदाहरण उपयोगकर्ता भरें',
+          primaryBtn: 'उपयोगकर्ता के रूप में लॉगिन / रजिस्टर करें',
         },
         doctor: {
           tabLabel: 'डॉक्टर (Doctor)',
           badge: 'श्रेणी 2 · डॉक्टर और टेलीमेडिसिन कंसोल',
           title: 'डॉक्टर लॉगिन बोर्ड',
           subtitle:
-            'रोगियों के लाइव वॉइस/वीडियो कॉल रिसीव करने, बीपी/शुगर रिपोर्ट देखने और परामर्श देने के लिए लॉगिन करें।',
+            'रोगियों के लाइव कॉल रिसीव करने, बीपी/शुगर देखने और परामर्श देने के लिए डॉक्टर ईमेल आईडी से लॉगिन करें।',
           nameLabel: 'डॉक्टर का पूरा नाम *',
           namePlaceholder: 'उदा. डॉ. विवेक पाटिल, MBBS, MD',
           contactLabel: 'डॉक्टर का संपर्क / टेलीमेडिसिन नंबर *',
@@ -284,15 +302,14 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           specialtyPlaceholder: 'उदा. फैमिली फिजिशियन, कार्डियोलॉजिस्ट',
           clinicLabel: 'क्लिनिक / अस्पताल का नाम और पता *',
           clinicPlaceholder: 'उदा. पाटिल क्लिनिक, कोथरूड, पुणे',
-          primaryBtn: 'डॉक्टर कंसोल में लॉगिन करें',
-          sampleBtn: 'उदाहरण डॉक्टर भरें',
+          primaryBtn: 'डॉक्टर कंसोल में लॉगिन / रजिस्टर करें',
         },
         community_head: {
           tabLabel: 'कम्युनिटी प्रोजेक्ट हेड',
           badge: 'श्रेणी 3 · सामुदायिक स्वास्थ्य प्रोजेक्ट प्रमुख',
           title: 'कम्युनिटी प्रोजेक्ट हेड लॉगिन',
           subtitle:
-            'सामुदायिक स्वास्थ्य शिविर (Health Camps), टीकाकरण अभियान और स्वास्थ्य जागरूकता सूचनाएं प्रबंधित करने के लिए लॉगिन करें।',
+            'सामुदायिक स्वास्थ्य शिविर, टीकाकरण अभियान और स्वास्थ्य जागरूकता सूचनाएं प्रबंधित करने के लिए लॉगिन करें।',
           nameLabel: 'प्रोजेक्ट हेड का पूरा नाम *',
           namePlaceholder: 'उदा. सुनीता देशमुख',
           contactLabel: 'आधिकारिक संपर्क नंबर *',
@@ -303,15 +320,27 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           designationLabel: 'पद / संस्था / स्वास्थ्य मिशन *',
           designationPlaceholder: 'उदा. कम्युनिटी प्रोजेक्ट हेड · स्वास्थ्य अभियान',
           primaryBtn: 'प्रोजेक्ट हेड कमांड सेंटर खोलें',
-          sampleBtn: 'उदाहरण प्रोजेक्ट हेड भरें',
         },
       },
+      emailLabel: 'ईमेल आईडी (डेटाबेस सुरक्षा व पहचान) *',
+      emailPlaceholder: 'उदा. name@example.com',
+      emailHelper: 'आपका हर लॉगिन और स्वास्थ्य रिकॉर्ड इस ईमेल आईडी के साथ डेटाबेस में सुरक्षित रहेगा।',
+      passwordLabel: 'पासवर्ड (Password) *',
+      passwordPlaceholder: 'सुरक्षित पासवर्ड दर्ज करें (कम से कम 6 अक्षर)',
+      showPassword: 'दिखाएं',
+      hidePassword: 'छिपाएं',
+      dbSecurityBadge: 'डेटाबेस व ईमेल द्वारा सुरक्षित',
+      dbSecurityDesc: 'फ़ायरबेस ज़ीरो-ट्रस्ट सुरक्षा यह सुनिश्चित करती है कि केवल आप ही अपने रिकॉर्ड देख सकें।',
       contactPlaceholder: '10 अंकों का मोबाइल नंबर (उदा. 9876543210)',
       ageLabel: 'उम्र (वर्ष) *',
       bloodGroupLabel: 'ब्लड ग्रुप',
-      loginGoogleBtn: 'मोबाइल नंबर सहेजें और Google से लॉगिन करें',
-      submittingText: 'पोर्टल खुल रहा है...',
+      primaryEmailBtn: 'ईमेल व पासवर्ड से लॉगिन / रजिस्टर करें',
+      loginGoogleBtn: 'Google से साइन इन करें (सत्यापित ईमेल आईडी)',
+      submittingText: 'डेटाबेस में सत्यापित व सुरक्षित हो रहा है...',
       errNameRequired: 'कृपया आगे बढ़ने के लिए अपना पूरा नाम लिखें।',
+      errEmailRequired: 'कृपया अपनी ईमेल आईडी दर्ज करें।',
+      errEmailInvalid: 'कृपया वैध ईमेल पता दर्ज करें (उदा. user@example.com)।',
+      errPasswordShort: 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।',
       errPhoneInvalid:
         'कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें (जैसे: 9876543210)।',
       aboutHeading: '01. प्रिवेंटिया ऐप की 7 प्रमुख स्वास्थ्य सुविधाएं',
@@ -398,21 +427,20 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           badge: 'प्रकार १ · नागरिक आणि रुग्ण आरोग्य पोर्टल',
           title: 'वापरकर्ता / रुग्ण लॉगिन बोर्ड',
           subtitle:
-            'तुमचा आरोग्य डॅशबोर्ड सुरू करण्यासाठी कृपया तुमचे नाव आणि १० अंकी मोबाईल क्रमांक प्रविष्ट करा.',
+            'दैनिक बीपी/शुगर, AI लक्षणे तपासणी आणि फॅमिली डॉक्टर सल्ल्यासाठी तुमचा ईमेल व पासवर्डने लॉगिन करा.',
           nameLabel: 'वापरकर्त्याचे / रुग्णाचे पूर्ण नाव *',
           namePlaceholder: 'उदा. रमेश कुलकर्णी',
           contactLabel: 'संपर्क मोबाईल क्रमांक (Contact No. / WhatsApp) *',
           contactHelper:
             'डॉक्टरांना कॉल करण्यासाठी, अपॉइंटमेंटसाठी आणि आपत्कालीन SOS मदतीसाठी आवश्यक.',
-          primaryBtn: 'वापरकर्ता म्हणून लॉगिन करा व डॅशबोर्ड उघडा',
-          sampleBtn: 'नमुना रुग्ण माहिती भरा',
+          primaryBtn: 'वापरकर्ता म्हणून लॉगिन / नोंदणी करा',
         },
         doctor: {
           tabLabel: 'डॉक्टर (Doctor)',
           badge: 'प्रकार २ · डॉक्टर आणि टेलीमेडिसिन कन्सोल',
           title: 'डॉक्टर लॉगिन बोर्ड',
           subtitle:
-            'रुग्णांचे लाईव्ह व्हॉइस/व्हिडिओ कॉल उचलण्यासाठी, त्यांचे बीपी/शुगर रिपोर्ट पाहण्यासाठी आणि सल्ला देण्यासाठी लॉगिन करा.',
+            'रुग्णांचे लाईव्ह कॉल उचलण्यासाठी, बीपी/शुगर रिपोर्ट पाहण्यासाठी डॉक्टर ईमेल आयडीने लॉगिन करा.',
           nameLabel: 'डॉक्टरांचे पूर्ण नाव *',
           namePlaceholder: 'उदा. डॉ. विवेक पाटील, MBBS, MD',
           contactLabel: 'डॉक्टरांचा संपर्क / टेलीमेडिसिन क्रमांक *',
@@ -422,15 +450,14 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           specialtyPlaceholder: 'उदा. फॅमिली फिजिशियन, हृदयरोग तज्ज्ञ',
           clinicLabel: 'क्लिनिक / हॉस्पिटलचे नाव आणि पत्ता *',
           clinicPlaceholder: 'उदा. पाटील क्लिनिक, कोथरूड, पुणे',
-          primaryBtn: 'डॉक्टर म्हणून लॉगिन करा व कन्सोल उघडा',
-          sampleBtn: 'नमुना डॉक्टर माहिती भरा',
+          primaryBtn: 'डॉक्टर म्हणून लॉगिन / नोंदणी करा',
         },
         community_head: {
           tabLabel: 'कम्युनिटी प्रोजेक्ट हेड',
           badge: 'प्रकार ३ · सामुदायिक आरोग्य प्रकल्प प्रमुख (Project Head)',
           title: 'कम्युनिटी प्रोजेक्ट हेड लॉगिन',
           subtitle:
-            'तुमच्या भागातील आरोग्य तपासणी शिबिरे, लसीकरण मोहीम आणि ज्येष्ठ नागरिक आरोग्य उपक्रमांचे नियोजन करण्यासाठी लॉगिन करा.',
+            'आरोग्य तपासणी शिबिरे, लसीकरण मोहीम आणि आरोग्य उपक्रमांचे नियोजन करण्यासाठी लॉगिन करा.',
           nameLabel: 'प्रोजेक्ट हेडचे पूर्ण नाव *',
           namePlaceholder: 'उदा. सुनीता देशमुख',
           contactLabel: 'अधिकृत संपर्क मोबाईल क्रमांक *',
@@ -441,15 +468,27 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
           designationLabel: 'पद / संस्था / आरोग्य अभियान *',
           designationPlaceholder: 'उदा. कम्युनिटी प्रोजेक्ट हेड · आरोग्य अभियान',
           primaryBtn: 'प्रोजेक्ट हेड म्हणून लॉगिन करा',
-          sampleBtn: 'नमुना प्रोजेक्ट हेड माहिती भरा',
         },
       },
+      emailLabel: 'ईमेल आयडी (डेटाबेस ओळख व सुरक्षितता) *',
+      emailPlaceholder: 'उदा. name@example.com',
+      emailHelper: 'तुमचा प्रत्येक लॉगिन आणि आरोग्य माहिती डेटाबेसमध्ये या ईमेल आयडीशी जोडली जाते.',
+      passwordLabel: 'पासवर्ड (Password) *',
+      passwordPlaceholder: 'सुरक्षित पासवर्ड टाका (किमान ६ अक्षरे)',
+      showPassword: 'दाखवा',
+      hidePassword: 'लपवा',
+      dbSecurityBadge: 'डेटाबेस व ईमेलने सुरक्षित',
+      dbSecurityDesc: 'झिरो-ट्रस्ट सिक्युरिटी नियमांनुसार फक्त तुम्हालाच तुमच्या नोंदी पाहण्याचा अधिकार आहे.',
       contactPlaceholder: '१० अंकी मोबाईल नंबर टाका (उदा. 9876543210)',
       ageLabel: 'वय (वर्षे) *',
       bloodGroupLabel: 'रक्तगट (Blood Group)',
-      loginGoogleBtn: 'संपर्क नंबर सेव्ह करा व Google ने लॉगिन करा',
-      submittingText: 'पोर्टल उघडत आहे...',
+      primaryEmailBtn: 'ईमेल व पासवर्डने लॉगिन / नोंदणी करा',
+      loginGoogleBtn: 'Google ने साइन इन करा (व्हेरिफाईड ईमेल आयडी)',
+      submittingText: 'डेटाबेसमध्ये सुरक्षित प्रमाणीकरण सुरू आहे...',
       errNameRequired: 'कृपया पुढे जाण्यासाठी पूर्ण नाव टाका.',
+      errEmailRequired: 'कृपया तुमचा ईमेल आयडी टाका.',
+      errEmailInvalid: 'कृपया वैध ईमेल पत्ता टाका (उदा. user@example.com).',
+      errPasswordShort: 'पासवर्ड किमान ६ अक्षरांचा असावा.',
       errPhoneInvalid:
         'कृपया वैध १० अंकी मोबाईल संपर्क क्रमांक टाका (उदा. 9876543210).',
       aboutHeading: '01. प्रिव्हेंटिया (Preventia) ॲपमधील ७ मुख्य आरोग्य सुविधा',
@@ -524,14 +563,31 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
     setErrorMsg(null);
   };
 
-  const validateAndSubmit = async (authMethod: 'direct' | 'google') => {
+  const validateAndSubmit = async (authMethod: 'password' | 'google' | 'direct') => {
     setErrorMsg(null);
     const trimmedName = displayName.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const digitsOnly = rawPhone.replace(/\D/g, '');
 
     if (!trimmedName) {
       setErrorMsg(copy.errNameRequired);
       return;
+    }
+
+    if (authMethod !== 'google') {
+      if (!trimmedEmail) {
+        setErrorMsg(copy.errEmailRequired);
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        setErrorMsg(copy.errEmailInvalid);
+        return;
+      }
+      if (authMethod === 'password' && password.length < 6) {
+        setErrorMsg(copy.errPasswordShort);
+        return;
+      }
     }
 
     if (digitsOnly.length < 10 || digitsOnly.length > 12) {
@@ -546,6 +602,8 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
     try {
       await onCompleteLogin({
         loginCategory,
+        email: trimmedEmail || 'user@preventia.health',
+        password: password || undefined,
         displayName: trimmedName.slice(0, 100),
         contactNumber: formattedContact.slice(0, 20),
         age: validAge,
@@ -562,6 +620,9 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
             ? communityDesignation.trim().slice(0, 120)
             : undefined,
       });
+    } catch (err: unknown) {
+      const errText = err instanceof Error ? err.message : String(err);
+      setErrorMsg(errText);
     } finally {
       setSubmitting(false);
     }
@@ -569,73 +630,7 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    validateAndSubmit('direct');
-  };
-
-  const handleFillSampleProfile = () => {
-    setErrorMsg(null);
-    if (loginCategory === 'user') {
-      setDisplayName(
-        language === 'mr'
-          ? 'रमेश कुलकर्णी'
-          : language === 'hi'
-          ? 'रमेश कुलकर्णी'
-          : 'Ramesh Kulkarni'
-      );
-      setRawPhone('9823014567');
-      setAge(66);
-      setBloodGroup('O+');
-    } else if (loginCategory === 'doctor') {
-      setDisplayName(
-        language === 'mr'
-          ? 'डॉ. विवेक पाटील'
-          : language === 'hi'
-          ? 'डॉ. विवेक पाटिल'
-          : 'Dr. Vivek Patil'
-      );
-      setRawPhone('9822011223');
-      setDoctorSpecialty(
-        language === 'mr'
-          ? 'फॅमिली फिजिशियन आणि एमडी मेडिसिन'
-          : language === 'hi'
-          ? 'फैमिली फिजिशियन और एमडी मेडिसिन'
-          : 'Family Physician & Internal Medicine (MBBS, MD)'
-      );
-      setDoctorClinic(
-        language === 'mr'
-          ? 'पाटील क्लिनिक, कोथरूड, पुणे'
-          : language === 'hi'
-          ? 'पाटिल क्लिनिक, कोथरूड, पुणे'
-          : 'Patil Clinic, Kothrud, Pune'
-      );
-      setAge(45);
-      setBloodGroup('B+');
-    } else {
-      setDisplayName(
-        language === 'mr'
-          ? 'सुनीता देशमुख'
-          : language === 'hi'
-          ? 'सुनीता देशमुख'
-          : 'Sunita Deshmukh'
-      );
-      setRawPhone('9850044556');
-      setCommunityWard(
-        language === 'mr'
-          ? 'प्रभाग १२ — कोथरूड आरोग्य विभाग, पुणे'
-          : language === 'hi'
-          ? 'वार्ड 12 — कोथरूड स्वास्थ्य क्षेत्र, पुणे'
-          : 'Ward 12 — Kothrud Community Health Zone, Pune'
-      );
-      setCommunityDesignation(
-        language === 'mr'
-          ? 'कम्युनिटी प्रोजेक्ट हेड · प्रतिबंधात्मक आरोग्य अभियान'
-          : language === 'hi'
-          ? 'कम्युनिटी प्रोजेक्ट हेड · निवारक स्वास्थ्य मिशन'
-          : 'Community Project Head · Preventive Health Mission'
-      );
-      setAge(42);
-      setBloodGroup('A+');
-    }
+    validateAndSubmit('password');
   };
 
   return (
@@ -921,13 +916,10 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
                 <span className="text-xs font-semibold text-teal-800">
                   {activeCategoryCopy.badge}
                 </span>
-                <button
-                  type="button"
-                  onClick={handleFillSampleProfile}
-                  className="text-xs font-medium text-teal-700 hover:underline cursor-pointer"
-                >
-                  {activeCategoryCopy.sampleBtn}
-                </button>
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>{copy.dbSecurityBadge}</span>
+                </span>
               </div>
               <h2
                 className={`font-display font-semibold text-slate-900 ${
@@ -968,6 +960,57 @@ export const LoginOnboardingPage: React.FC<LoginOnboardingPageProps> = ({
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder={activeCategoryCopy.namePlaceholder}
                     maxLength={100}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:border-teal-700"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email Address (Database Identity & Verification) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                  {copy.emailLabel}
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-teal-700 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={copy.emailPlaceholder}
+                    maxLength={160}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:border-teal-700"
+                    required
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                  {copy.emailHelper}
+                </p>
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-800">
+                    {copy.passwordLabel}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-[11px] font-medium text-teal-700 hover:text-teal-900 cursor-pointer"
+                  >
+                    {showPassword ? copy.hidePassword : copy.showPassword}
+                  </button>
+                </div>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-teal-700 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={copy.passwordPlaceholder}
+                    minLength={6}
+                    maxLength={64}
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:border-teal-700"
                     required
                   />

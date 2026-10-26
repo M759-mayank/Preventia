@@ -1,5 +1,13 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -76,6 +84,23 @@ export async function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider);
 }
 
+export async function signInWithEmail(email: string, pass: string) {
+  return signInWithEmailAndPassword(auth, email.trim(), pass);
+}
+
+export async function signUpWithEmail(email: string, pass: string, name?: string) {
+  const res = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+  if (name && res.user) {
+    try {
+      await updateProfile(res.user, { displayName: name.trim() });
+    } catch {
+      // Ignore non-fatal profile update failure
+    }
+  }
+  return res;
+}
+
 export async function logOutUser() {
   return signOut(auth);
 }
+
