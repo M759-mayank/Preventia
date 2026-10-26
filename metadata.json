@@ -1,0 +1,6 @@
+{
+  "name": "Preventia — Community Health & Preventive Care",
+  "description": "Multilingual (English, Hindi, Marathi) community health awareness, preventive care, AI symptom triage, vaccination & health tracking, telemedicine video consultations, and emergency medical locator.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

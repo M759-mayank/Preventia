@@ -1,0 +1,201 @@
+/**
+ * Phase 0 & Phase 5 Security TDD Test Runner for Preventia Firestore Rules
+ * Verifies that all 12 "Dirty Dozen" adversarial payloads return PERMISSION_DENIED.
+ */
+
+export interface DirtyDozenScenario {
+  id: number;
+  name: string;
+  operation: 'get' | 'list' | 'create' | 'update' | 'delete';
+  path: string;
+  auth: { uid: string; email_verified: boolean } | null;
+  payload?: Record<string, unknown>;
+  expectedResult: 'PERMISSION_DENIED';
+}
+
+export const DIRTY_DOZEN_TESTS: DirtyDozenScenario[] = [
+  {
+    id: 1,
+    name: 'Unverified Email Write',
+    operation: 'create',
+    path: '/users/user_A',
+    auth: { uid: 'user_A', email_verified: false },
+    payload: {
+      uid: 'user_A',
+      displayName: 'Test User',
+      contactNumber: '+91 9876543210',
+      age: 65,
+      bloodGroup: 'O+',
+      preferredLanguage: 'mr',
+      seniorMode: true,
+      encryptionKeySalt: 'salt123',
+      createdAt: 'SERVER_TIMESTAMP',
+      updatedAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 2,
+    name: 'Cross-Tenant PII Read',
+    operation: 'get',
+    path: '/users/user_B',
+    auth: { uid: 'user_A', email_verified: true },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 3,
+    name: 'Shadow Field Injection',
+    operation: 'create',
+    path: '/users/user_A',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      uid: 'user_A',
+      displayName: 'Test User',
+      contactNumber: '+91 9876543210',
+      age: 65,
+      bloodGroup: 'O+',
+      preferredLanguage: 'mr',
+      seniorMode: true,
+      encryptionKeySalt: 'salt123',
+      isAdmin: true,
+      createdAt: 'SERVER_TIMESTAMP',
+      updatedAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 4,
+    name: 'Orphaned Subcollection Write (No Parent User)',
+    operation: 'create',
+    path: '/users/non_existent_user/vitals/vital_1',
+    auth: { uid: 'non_existent_user', email_verified: true },
+    payload: {
+      userId: 'non_existent_user',
+      date: '2026-09-27',
+      systolic: 120,
+      diastolic: 80,
+      heartRate: 72,
+      bloodSugar: 95,
+      sleepHours: 7.5,
+      sleepQuality: 'Good',
+      waterGlasses: 8,
+      notes: 'Normal',
+      createdAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 5,
+    name: 'Identity Spoofing in Payload',
+    operation: 'create',
+    path: '/users/user_A/vitals/vital_1',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      userId: 'user_B',
+      date: '2026-09-27',
+      systolic: 120,
+      diastolic: 80,
+      heartRate: 72,
+      bloodSugar: 95,
+      sleepHours: 7.5,
+      sleepQuality: 'Good',
+      waterGlasses: 8,
+      notes: 'Spoofed owner',
+      createdAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 6,
+    name: 'Spoofed Client Timestamp',
+    operation: 'create',
+    path: '/users/user_A/medications/med_1',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      userId: 'user_A',
+      medicineName: 'Metformin',
+      dosage: '500mg',
+      scheduleTime: '08:00 AM',
+      frequency: 'Daily',
+      takenToday: false,
+      createdAt: '2020-01-01T00:00:00Z',
+      updatedAt: '2020-01-01T00:00:00Z',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 7,
+    name: 'Immutable Field Mutation',
+    operation: 'update',
+    path: '/users/user_A/appointments/appt_1',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      userId: 'user_B',
+      status: 'Cancelled',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 8,
+    name: 'Terminal State Bypass',
+    operation: 'update',
+    path: '/users/user_A/appointments/completed_appt',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      status: 'Scheduled',
+      updatedAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 9,
+    name: 'Oversized String Denial-of-Wallet',
+    operation: 'create',
+    path: '/users/user_A/medicalRecords/rec_1',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      userId: 'user_A',
+      title: 'Lab Report',
+      category: 'Blood Test',
+      recordDate: '2026-09-27',
+      encryptedPayload: 'X'.repeat(5000),
+      isEncrypted: true,
+      createdAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 10,
+    name: 'Path ID Poisoning',
+    operation: 'create',
+    path: '/users/user_A/vitals/bad$id!@#',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {},
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 11,
+    name: 'Invalid Enum Value',
+    operation: 'update',
+    path: '/users/user_A',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      preferredLanguage: 'fr',
+      updatedAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 12,
+    name: 'Unauthorized Partial Update Keys',
+    operation: 'update',
+    path: '/users/user_A/medications/med_1',
+    auth: { uid: 'user_A', email_verified: true },
+    payload: {
+      medicineName: 'InjectedMedicine',
+      takenToday: true,
+      updatedAt: 'SERVER_TIMESTAMP',
+    },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+];

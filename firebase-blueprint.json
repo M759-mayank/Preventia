@@ -1,0 +1,375 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile, language preference, age for preventive screenings, and senior accessibility settings.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "contactNumber": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 20,
+          "pattern": "^[0-9+\\-\\s]{10,20}$",
+          "description": "Patient contact mobile number collected on the login board."
+        },
+        "age": {
+          "type": "number"
+        },
+        "bloodGroup": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "enum": ["en", "hi", "mr"],
+          "maxLength": 10
+        },
+        "seniorMode": {
+          "type": "boolean"
+        },
+        "encryptionKeySalt": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "contactNumber", "age", "bloodGroup", "preferredLanguage", "seniorMode", "encryptionKeySalt", "createdAt", "updatedAt"]
+    },
+    "VitalRecord": {
+      "title": "VitalRecord",
+      "description": "Daily health tracking log including blood pressure, heart rate, blood sugar, sleep hours, and hydration.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "systolic": {
+          "type": "number"
+        },
+        "diastolic": {
+          "type": "number"
+        },
+        "heartRate": {
+          "type": "number"
+        },
+        "bloodSugar": {
+          "type": "number"
+        },
+        "sleepHours": {
+          "type": "number"
+        },
+        "sleepQuality": {
+          "type": "string",
+          "enum": ["Excellent", "Good", "Fair", "Poor"],
+          "maxLength": 20
+        },
+        "waterGlasses": {
+          "type": "number"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "date", "systolic", "diastolic", "heartRate", "bloodSugar", "sleepHours", "sleepQuality", "waterGlasses", "notes", "createdAt"]
+    },
+    "VaccinationRecord": {
+      "title": "VaccinationRecord",
+      "description": "Immunization and vaccination record for preventive care.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "vaccineName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "doseNumber": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Completed", "Upcoming", "Due"],
+          "maxLength": 20
+        },
+        "scheduledDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "clinicName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "vaccineName", "doseNumber", "status", "scheduledDate", "clinicName", "createdAt", "updatedAt"]
+    },
+    "MedicationReminder": {
+      "title": "MedicationReminder",
+      "description": "Daily medication reminder and adherence tracker.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "medicineName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "dosage": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "scheduleTime": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "frequency": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "takenToday": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "medicineName", "dosage", "scheduleTime", "frequency", "takenToday", "createdAt", "updatedAt"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Patient appointment for in-person or telemedicine video consultation.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "doctorName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "specialty": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "appointmentDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "appointmentTime": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "consultType": {
+          "type": "string",
+          "enum": ["Video", "In-Person"],
+          "maxLength": 20
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Scheduled", "Completed", "Cancelled"],
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "doctorName", "specialty", "appointmentDate", "appointmentTime", "consultType", "reason", "status", "createdAt", "updatedAt"]
+    },
+    "EncryptedMedicalRecord": {
+      "title": "EncryptedMedicalRecord",
+      "description": "End-to-end AES-GCM encrypted medical record stored in user vault.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "recordDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "encryptedPayload": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "isEncrypted": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "title", "category", "recordDate", "encryptedPayload", "isEncrypted", "createdAt"]
+    },
+    "DoctorChatMessage": {
+      "title": "DoctorChatMessage",
+      "description": "Consultation chat message between patient and local community doctor.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "doctorId": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "sender": {
+          "type": "string",
+          "enum": ["patient", "doctor"],
+          "maxLength": 20
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "doctorId", "sender", "text", "createdAt"]
+    },
+    "PersonalDoctor": {
+      "title": "PersonalDoctor",
+      "description": "Patient's added regular or family/related doctor for communication and appointments.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "specialty": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "relationType": {
+          "type": "string",
+          "enum": ["Regular Family Doctor", "Related / Family Doctor", "Personal Specialist", "Visiting Doctor"],
+          "maxLength": 40
+        },
+        "hospital": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "contactPhone": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 20,
+          "pattern": "^[0-9+\\-\\s]{10,20}$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "name", "specialty", "relationType", "hospital", "contactPhone", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Primary user profile document keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/vitals/{vitalId}": {
+      "schema": { "$ref": "#/entities/VitalRecord" },
+      "description": "Subcollection of user health & sleep tracking logs."
+    },
+    "/users/{userId}/vaccinations/{vaccineId}": {
+      "schema": { "$ref": "#/entities/VaccinationRecord" },
+      "description": "Subcollection of user vaccination records."
+    },
+    "/users/{userId}/medications/{medId}": {
+      "schema": { "$ref": "#/entities/MedicationReminder" },
+      "description": "Subcollection of daily medication reminders."
+    },
+    "/users/{userId}/appointments/{apptId}": {
+      "schema": { "$ref": "#/entities/Appointment" },
+      "description": "Subcollection of patient appointments."
+    },
+    "/users/{userId}/medicalRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/EncryptedMedicalRecord" },
+      "description": "Subcollection of client-side encrypted medical records."
+    },
+    "/users/{userId}/consultMessages/{msgId}": {
+      "schema": { "$ref": "#/entities/DoctorChatMessage" },
+      "description": "Subcollection of consultation messages with local doctors."
+    },
+    "/users/{userId}/personalDoctors/{doctorId}": {
+      "schema": { "$ref": "#/entities/PersonalDoctor" },
+      "description": "Subcollection of patient's regular and related doctors."
+    }
+  }
+}
