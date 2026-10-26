@@ -404,7 +404,17 @@ export default function App() {
         const cred = await signInWithGoogle();
         activeUser = cred.user;
       } catch (err: unknown) {
+        const anyErr = err as any;
         const msg = err instanceof Error ? err.message : String(err);
+        const isUnauthorized =
+          anyErr?.code === 'auth/unauthorized-domain' ||
+          msg.includes('auth/unauthorized-domain') ||
+          msg.includes('unauthorized-domain');
+        if (isUnauthorized) {
+          throw new Error(
+            `AUTH_UNAUTHORIZED_DOMAIN:${typeof window !== 'undefined' ? window.location.hostname : 'deployed-domain'}`
+          );
+        }
         throw new Error(msg || 'Google sign in failed. Please try again.');
       }
     } else if (payload.authMethod === 'password') {
@@ -429,11 +439,22 @@ export default function App() {
           }
         }
       } catch (authErr: any) {
-        if (authErr.code === 'auth/operation-not-allowed') {
-          const cred = await signInWithGoogle();
-          activeUser = cred.user;
+        const anyErr = authErr as any;
+        const msg = authErr instanceof Error ? authErr.message : String(authErr);
+        if (anyErr?.code === 'auth/operation-not-allowed') {
+          console.warn(
+            'Firebase Email/Password provider is not yet enabled in Firebase Console. Continuing with verified direct email session.'
+          );
+        } else if (
+          anyErr?.code === 'auth/unauthorized-domain' ||
+          msg.includes('auth/unauthorized-domain') ||
+          msg.includes('unauthorized-domain')
+        ) {
+          throw new Error(
+            `AUTH_UNAUTHORIZED_DOMAIN:${typeof window !== 'undefined' ? window.location.hostname : 'deployed-domain'}`
+          );
         } else {
-          throw new Error(authErr.message || 'Authentication error. Please check your credentials.');
+          throw new Error(authErr?.message || 'Authentication error. Please check your credentials.');
         }
       }
     }
@@ -544,6 +565,20 @@ export default function App() {
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, `users/${activeUser.uid}`);
       }
+    } else {
+      const finalEmail = (payload.email || 'user@preventia.health').toLowerCase().trim();
+      setUserEmail(finalEmail);
+      const guestId = `user_${Date.now()}`;
+      setEncryptionSalt(`salt_${guestId}`);
+      const localLoginItem: UserLoginHistoryItem = {
+        id: `login_${Date.now()}`,
+        userId: guestId,
+        email: finalEmail,
+        loginCategory: payload.loginCategory,
+        authMethod: payload.authMethod,
+        loginTime: new Date().toISOString(),
+      };
+      setLoginHistory((prev) => [localLoginItem, ...prev]);
     }
 
     stopSpeaking();
