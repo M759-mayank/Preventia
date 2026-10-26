@@ -242,7 +242,45 @@ export const EmergencyMapSection: React.FC<{
   language: Language;
   seniorMode: boolean;
 }> = ({ language, seniorMode }) => {
-  const apiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
+  const [apiKey, setApiKey] = useState<string>(() => {
+    if (typeof window !== 'undefined' && (window as any).__GOOGLE_MAPS_API_KEY__) {
+      return ((window as any).__GOOGLE_MAPS_API_KEY__ || '').trim();
+    }
+    return (
+      import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+      'AIzaSyAXGEIQHjxA80u_45FzLWMbk1S3y589WYg'
+    ).trim();
+  });
+
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Fallback runtime key retrieval & authentication error listener
+  useEffect(() => {
+    if (!apiKey) {
+      fetch('/api/maps-config')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.apiKey) {
+            setApiKey(data.apiKey.trim());
+          }
+        })
+        .catch((err) => console.warn('Could not fetch maps config:', err));
+    }
+
+    const prevAuthFailure = (window as any).gm_authFailure;
+    (window as any).gm_authFailure = () => {
+      console.error('Google Maps Platform authentication error');
+      setAuthError(
+        'Google Maps authentication failed. If you have restricted your API key by HTTP referrers, please ensure your deployed domain is authorized in the Google Cloud Console.'
+      );
+      if (typeof prevAuthFailure === 'function') prevAuthFailure();
+    };
+
+    return () => {
+      (window as any).gm_authFailure = prevAuthFailure;
+    };
+  }, [apiKey]);
+
   const [center, setCenter] = useState<{ lat: number; lng: number }>({
     lat: 18.5204,
     lng: 73.8567,
@@ -543,6 +581,16 @@ export const EmergencyMapSection: React.FC<{
         </div>
       </div>
 
+      {authError && (
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-sm flex items-start gap-3">
+          <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-semibold">Google Maps Configuration Notice</p>
+            <p>{authError}</p>
+          </div>
+        </div>
+      )}
+
       {errorMsg && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">
           {errorMsg}
@@ -612,8 +660,9 @@ export const EmergencyMapSection: React.FC<{
               </Map>
             </APIProvider>
           ) : (
-            <div className="w-full h-full flex items-center justify-center p-6 text-center text-slate-500">
-              Google Maps API key not configured.
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-slate-500 gap-2">
+              <Compass className="w-8 h-8 text-teal-600 animate-spin" />
+              <p className="text-sm font-medium">Initializing Google Maps...</p>
             </div>
           )}
         </div>

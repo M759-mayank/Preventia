@@ -5,7 +5,10 @@ import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const googleMapsKey = process.env.VITE_GOOGLE_MAPS_API_KEY || env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const googleMapsKey =
+    process.env.VITE_GOOGLE_MAPS_API_KEY ||
+    env.VITE_GOOGLE_MAPS_API_KEY ||
+    'AIzaSyAXGEIQHjxA80u_45FzLWMbk1S3y589WYg';
 
   return {
     plugins: [react(), tailwindcss()],

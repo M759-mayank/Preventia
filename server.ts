@@ -1,3 +1,4 @@
+import fs from "fs";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -18,9 +19,22 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    const indexPath = path.join(distPath, "index.html");
+    app.use(express.static(distPath, { index: false }));
     app.get("*all", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      try {
+        let html = fs.readFileSync(indexPath, "utf8");
+        const mapsKey =
+          process.env.VITE_GOOGLE_MAPS_API_KEY ||
+          process.env.GOOGLE_MAPS_API_KEY ||
+          "AIzaSyAXGEIQHjxA80u_45FzLWMbk1S3y589WYg";
+        const scriptInjection = `<script>window.__GOOGLE_MAPS_API_KEY__ = ${JSON.stringify(mapsKey)};</script></head>`;
+        html = html.replace("</head>", scriptInjection);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.send(html);
+      } catch {
+        res.sendFile(indexPath);
+      }
     });
   }
 

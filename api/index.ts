@@ -27,6 +27,15 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// Runtime Google Maps Platform configuration endpoint
+app.get("/api/maps-config", (_req, res) => {
+  const apiKey =
+    process.env.VITE_GOOGLE_MAPS_API_KEY ||
+    process.env.GOOGLE_MAPS_API_KEY ||
+    "AIzaSyAXGEIQHjxA80u_45FzLWMbk1S3y589WYg";
+  res.json({ apiKey });
+});
+
 function buildFallbackTriageAssessment(
   symptoms: string,
   age: number | string,
